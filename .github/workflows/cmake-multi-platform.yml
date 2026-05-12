@@ -67,14 +67,16 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path "${{ github.workspace }}/dist" | Out-Null
           Get-ChildItem -Path "${{ github.workspace }}/build" -Filter "*.zip" | ForEach-Object {
-            Copy-Item $_.FullName -Destination "${{ github.workspace }}/dist/$($_.BaseName)-${{ matrix.platform }}.zip"
+            $extensionDir = "${{ github.workspace }}/dist/$($_.BaseName)"
+            New-Item -ItemType Directory -Force -Path $extensionDir | Out-Null
+            Copy-Item $_.FullName -Destination "$extensionDir/$($_.BaseName)-${{ matrix.platform }}.zip"
           }
 
       - name: Upload package
         uses: actions/upload-artifact@v7
         with:
           name: packages-${{ matrix.platform }}
-          path: ${{ github.workspace }}/dist/*.zip
+          path: ${{ github.workspace }}/dist
           if-no-files-found: error
 
   release:
@@ -100,11 +102,18 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          mapfile -d '' release_assets < <(find dist -type f -name '*.zip' -print0 | sort -z)
+
+          if [ "${#release_assets[@]}" -eq 0 ]; then
+            echo "No package zip files found in dist"
+            exit 1
+          fi
+
           if gh release view "${{ github.ref_name }}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
-            gh release upload "${{ github.ref_name }}" dist/*.zip --clobber --repo "${{ github.repository }}"
+            gh release upload "${{ github.ref_name }}" "${release_assets[@]}" --clobber --repo "${{ github.repository }}"
           else
             gh release create "${{ github.ref_name }}" \
-              dist/*.zip \
+              "${release_assets[@]}" \
               --title "${{ github.ref_name }}" \
               --generate-notes \
               --verify-tag \

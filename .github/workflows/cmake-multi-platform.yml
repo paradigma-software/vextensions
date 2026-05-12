@@ -60,24 +60,22 @@ jobs:
           cmake
           --build "${{ github.workspace }}/build"
           --config Release
-          --target ocr
+          --target package_extensions
           --parallel
 
       - name: Prepare package artifact
-        run: >
-          cmake
-          -E make_directory "${{ github.workspace }}/dist"
-          &&
-          cmake
-          -E copy_if_different
-          "${{ github.workspace }}/build/ocr.zip"
-          "${{ github.workspace }}/dist/ocr-${{ matrix.platform }}.zip"
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "${{ github.workspace }}/dist" | Out-Null
+          Get-ChildItem -Path "${{ github.workspace }}/build" -Filter "*.zip" | ForEach-Object {
+            Copy-Item $_.FullName -Destination "${{ github.workspace }}/dist/$($_.BaseName)-${{ matrix.platform }}.zip"
+          }
 
       - name: Upload package
         uses: actions/upload-artifact@v4
         with:
-          name: ocr-${{ matrix.platform }}
-          path: ${{ github.workspace }}/dist/ocr-${{ matrix.platform }}.zip
+          name: packages-${{ matrix.platform }}
+          path: ${{ github.workspace }}/dist/*.zip
           if-no-files-found: error
 
   release:

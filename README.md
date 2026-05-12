@@ -1,6 +1,6 @@
-# Valentina extensions
+# ValentinaDB extensions
 
-Valentina extension modules.
+ValentinaDB extension modules.
 
 ## Layout
 

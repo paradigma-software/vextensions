@@ -21,4 +21,6 @@ set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build dependencies as static libraries" FO
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(ValentinaExtension)
 
+add_subdirectory(compress)
+add_subdirectory(base64)
 add_subdirectory(ocr)

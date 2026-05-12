@@ -1,0 +1,107 @@
+name: CMake on multiple platforms
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux-x86_64
+            os: ubuntu-24.04
+            cmake_args: -DCMAKE_BUILD_TYPE=Release
+
+          - platform: linux-arm64
+            os: ubuntu-24.04-arm
+            cmake_args: -DCMAKE_BUILD_TYPE=Release
+
+          - platform: macos-x86_64
+            os: macos-15-intel
+            cmake_args: -DCMAKE_BUILD_TYPE=Release
+
+          - platform: macos-arm64
+            os: macos-14
+            cmake_args: -DCMAKE_BUILD_TYPE=Release
+
+          - platform: windows-x86_64
+            os: windows-2022
+            cmake_args: -A x64
+
+          - platform: windows-arm64
+            os: windows-11-arm
+            cmake_args: -A ARM64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: >
+          cmake
+          -S "${{ github.workspace }}"
+          -B "${{ github.workspace }}/build"
+          ${{ matrix.cmake_args }}
+
+      - name: Build
+        run: >
+          cmake
+          --build "${{ github.workspace }}/build"
+          --config Release
+          --target ocr
+          --parallel
+
+      - name: Prepare package artifact
+        run: >
+          cmake
+          -E make_directory "${{ github.workspace }}/dist"
+          &&
+          cmake
+          -E copy_if_different
+          "${{ github.workspace }}/build/ocr.zip"
+          "${{ github.workspace }}/dist/ocr-${{ matrix.platform }}.zip"
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ocr-${{ matrix.platform }}
+          path: ${{ github.workspace }}/dist/ocr-${{ matrix.platform }}.zip
+          if-no-files-found: error
+
+  release:
+    name: Release
+    runs-on: ubuntu-24.04
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download packages
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create "${{ github.ref_name }}"
+          dist/*.zip
+          --title "${{ github.ref_name }}"
+          --generate-notes
+          --verify-tag

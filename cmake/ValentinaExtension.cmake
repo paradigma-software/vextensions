@@ -28,6 +28,16 @@ function(add_valentina_extension)
             ${PROJECT_SOURCE_DIR}/include
             ${EXT_INCLUDE_DIRECTORIES})
     target_link_libraries(${EXT_NAME} PRIVATE ${EXT_LINK_LIBRARIES})
+    set_target_properties(${EXT_NAME}
+        PROPERTIES
+            C_VISIBILITY_PRESET hidden
+            CXX_VISIBILITY_PRESET hidden
+            VISIBILITY_INLINES_HIDDEN YES)
+
+    if(UNIX AND NOT APPLE)
+        target_link_options(${EXT_NAME} PRIVATE
+            "LINKER:--exclude-libs,ALL")
+    endif()
 
     foreach(data_dir IN LISTS EXT_DATA_DIRS)
         if(NOT IS_DIRECTORY ${data_dir})

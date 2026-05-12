@@ -7,6 +7,7 @@
 
 // STD:
 #include <cstring>
+#include <filesystem>
 #include <string>
 
 // SYSTEM:
@@ -16,6 +17,7 @@
     #endif
     #include <windows.h>
 #else
+#include <cstdlib>
     #include <dlfcn.h>
 #endif
 
@@ -36,6 +38,58 @@ const char kModuleAddressAnchor = 0;
 void delete_string( void* p )
 {
     delete[] static_cast<char*>( p );
+}
+
+/**********************************************************************************************/
+std::string tessdata_path_next_to( const std::string& modulePath )
+{
+    const size_t pos = modulePath.find_last_of( "/\\" );
+    if( pos == std::string::npos )
+        return "tessdata";
+
+    return modulePath.substr( 0, pos + 1 ) + "tessdata";
+}
+
+/**********************************************************************************************/
+bool directory_exists( const std::string& path )
+{
+    std::error_code error;
+    return std::filesystem::is_directory( path, error );
+}
+
+/**********************************************************************************************/
+std::string real_module_path( const std::string& modulePath )
+{
+#if defined( _WIN32 )
+    (void) modulePath;
+    return {};
+#else
+    char* const resolved = realpath( modulePath.c_str(), nullptr );
+    if( !resolved )
+        return {};
+
+    std::string result = resolved;
+    free( resolved );
+    return result;
+#endif
+}
+
+/**********************************************************************************************/
+std::string find_tessdata_path( const std::string& modulePath )
+{
+    const std::string directPath = tessdata_path_next_to( modulePath );
+    if( directory_exists( directPath ) )
+        return directPath;
+
+    const std::string realPath = real_module_path( modulePath );
+    if( !realPath.empty() && realPath != modulePath )
+    {
+        const std::string realTessdataPath = tessdata_path_next_to( realPath );
+        if( directory_exists( realTessdataPath ) )
+            return realTessdataPath;
+    }
+
+    return directPath;
 }
 
 /**********************************************************************************************/
@@ -83,11 +137,7 @@ std::string module_tessdata_path()
     std::string modulePath = info.dli_fname;
 #endif
 
-    const size_t pos = modulePath.find_last_of( "/\\" );
-    if( pos == std::string::npos )
-        return "tessdata";
-
-    return modulePath.substr( 0, pos + 1 ) + "tessdata";
+    return find_tessdata_path( modulePath );
 }
 
 /**********************************************************************************************/
@@ -105,13 +155,22 @@ valentina_value_t run_ocr( valentina_context_t* ctx, valentina_value_t* args, Oc
 
     // Argument 0 (required): image data in PNG, JPEG or BMP format
     if( valentina_is_null( args[ 0 ] ) )
-        return valentina_create_text( ctx, "", 0, nullptr );
+    {
+        const std::string error = std::string( functionName ) + ": image data is NULL.";
+        valentina_throw_error( ctx, error.c_str(), -1 );
+        return nullptr;
+    }
 
     int64_t     len  = 0;
     const void* data = valentina_get_binary( args[ 0 ], &len );
 
     if( !data || len <= 0 )
-        return valentina_create_text( ctx, "", 0, nullptr );
+    {
+        const std::string error = std::string( functionName ) +
+            ": image data must be a non-empty binary value.";
+        valentina_throw_error( ctx, error.c_str(), -1 );
+        return nullptr;
+    }
 
     // Argument 1 (optional): language string, default "eng"
     std::string lang = "eng";
@@ -170,8 +229,12 @@ valentina_value_t run_ocr( valentina_context_t* ctx, valentina_value_t* args, Oc
     if( api.Init( tessdataPath.empty() ? nullptr : tessdataPath.c_str(), lang.c_str(), oem ) != 0 )
     {
         pixDestroy( &pix );
-        const std::string error = std::string( functionName ) + ": failed to initialize Tesseract.";
+
+        const std::string error = std::string( functionName ) +
+            ": failed to initialize Tesseract for lang '" + lang +
+            "' using tessdata path '" + tessdataPath + "'.";
         valentina_throw_error( ctx, error.c_str(), -1 );
+        
         return nullptr;
     }
 

@@ -23,4 +23,5 @@ include(ValentinaExtension)
 
 add_subdirectory(compress)
 add_subdirectory(base64)
+add_subdirectory(generate_series)
 add_subdirectory(ocr)

@@ -9,6 +9,7 @@ cmake/                  shared CMake helpers
 include/                shared extension API headers
 base64/                 Base64 extension
 compress/               compression extension
+generate_series/        generate_series procedure extension
 ocr/                    OCR extension
 ```
 
@@ -31,3 +32,4 @@ cmake --build build --config Release --target package_extensions -j
 - [OCR](ocr/README.md)
 - [Compress](compress/README.md)
 - [Base64](base64/README.md)
+- [Generate Series](generate_series/README.md)

@@ -24,12 +24,6 @@ cmake -S . -B build
 cmake --build build --config Release --target package_extensions -j
 ```
 
-Each extension produces its own zip package under `build/`, for example:
-
-```text
-build/ocr.zip
-```
-
 ## Extensions
 
 - [OCR](ocr/README.md)

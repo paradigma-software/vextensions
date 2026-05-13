@@ -1,6 +1,11 @@
-# ValentinaDB extensions
+# ValentinaDB Extensions
 
-ValentinaDB extension modules.
+Starting with version 16, ValentinaDB now supports extensions written in C, C++, Python, and JavaScript. 
+This repository contains various extensions that can be downloaded in compiled form 
+and installed into your ValentinaDB application or Valentina Server.
+
+- [Docs](https://valentina-db.com/dokuwiki/doku.php?id=valentina:products:vcomponents:vkernel:extensions:extensions)
+
 
 ## Layout
 

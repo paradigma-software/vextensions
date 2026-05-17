@@ -37,6 +37,13 @@ function(add_valentina_extension)
     if(UNIX AND NOT APPLE)
         target_link_options(${EXT_NAME} PRIVATE
             "LINKER:--exclude-libs,ALL")
+    elseif(APPLE)
+        set(_exports_file "${CMAKE_CURRENT_BINARY_DIR}/${EXT_NAME}_exports.txt")
+        file(WRITE "${_exports_file}"
+            "_valentina_extension_bind_api\n"
+            "_valentina_extension_init\n")
+        target_link_options(${EXT_NAME} PRIVATE
+            "-Wl,-exported_symbols_list,${_exports_file}")
     endif()
 
     foreach(data_dir IN LISTS EXT_DATA_DIRS)
